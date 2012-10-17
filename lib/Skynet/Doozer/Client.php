@@ -11,6 +11,8 @@ if (!defined('SKYNET_DOOZER_MSG')) {
     define('SKYNET_DOOZER_MSG', true);
 }
 
+require('Exception.php');
+
 class Client {
     // raw socket handle
     private $_socket = null;
@@ -19,13 +21,16 @@ class Client {
     // Doozerd port
     private $_port = '8046';
     // Socket params, see @http://www.php.net/manual/en/function.socket-get-option.php
-    private $_params = array();
+    private $_params = array(
+        SO_RCVTIMEO => array("sec"=>0, "usec"=>10),
+        SO_SNDTIMEO => array("sec"=>10, "usec" => 0)
+    );
     
     function __construct($host = '127.0.0.1', $port = '8046', $params = array()) {
         $nport = getservbyname($port, 'tcp');
         $this->_port = empty($nport) ? $port : $nport;
         $this->_host = gethostbyname($host);
-        $this->_params = $params;
+        $this->_params = $this->_params + $params;
         $this->_connect();
     }  
 
@@ -62,9 +67,10 @@ class Client {
         $request->setTag(0);
         $data = $request->serialize();
         $len = strlen($data);
-        $data .= pack('N', $len);
+        $data = pack('N', $len) . $data;
+        
         while(true) { 
-            $sent = socket_write($this->_socket, $data, $len); 
+            $sent = socket_write($this->_socket, $data, strlen($data)); 
             if($sent === false) { 
                 throw new Exception(socket_strerror(socket_last_error($this->_socket)));
             } 
@@ -77,6 +83,15 @@ class Client {
         }
     }
 
+    private function _invoke($request) {
+        $this->_write($request);
+        $response = $this->_read();
+        if ($response->getErrCode() != 0) {
+            throw new Exception($response->getErrDetail());
+        }
+        return $response;
+    }
+
     public function close() {
         socket_shutdown($this->_socket);
     }
@@ -84,11 +99,44 @@ class Client {
     public function currentVersion() {
         $request = new Request();
         $request->setVerb(Request\Verb::REV);
-        $this->_write($request);
-        $response = $this->_read();
+        $response = $this->_invoke($request);
         return $response->rev;
     }
-}
 
-$c = new Client();
-echo $c->currentVersion();
+    public function set($path, $value, $rev=null) {
+        $request = new Request();
+        $request->setVerb(Request\Verb::SET);
+        $request->setPath($path);
+        $request->setValue($value);
+        $request->setRev($rev);
+        $response = $this->_invoke($request);
+        return $response->rev;       
+    }
+
+    public function get($path, $rev=null) {
+        $request = new Request();
+        $request->setVerb(Request\Verb::GET);
+        $request->setPath($path);
+        $request->setRev($rev);
+        $response = $this->_invoke($request);
+        return $response->value;       
+    }
+
+    public function delete($path, $rev=null) {
+        $request = new Request();
+        $request->setVerb(Request\Verb::DEL);
+        $request->setPath($path);
+        $request->setRev($rev);
+        $this->_write($request);
+    }
+
+    public function dir($path, $offset=0, $rev=null) {
+        $request = new Request();
+        $request->setVerb(Request\Verb::GETDIR);
+        $request->setPath($path);
+        $request->setRev($rev);
+        $request->setOffset($offset);
+        $response = $this->_invoke($request);
+        return $response->path;         
+    }
+}
