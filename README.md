@@ -1,4 +1,25 @@
-php_skynet
+PHP Skynet
 ==========
 
-PHP Client and Server to Skynet
+PHP Client and Server to [Skynet](https://github.com/bketelsen/skynet)
+
+Dependencies
+============
+
+[PHP 5.3.0 and above](http://www.php.net)
+[MongoDB PHP Driver](https://github.com/mongodb/mongo-php-driver)
+[Protobuf-PHP](https://github.com/drslump/Protobuf-PHP)
+
+Authors
+=======
+Xing Xing <mikespook@gmail.com>
+
+Open Source - MIT Software License
+==================================
+Copyright (c) 2012 Xing Xing
+
+Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
