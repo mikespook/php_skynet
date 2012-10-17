@@ -11,8 +11,6 @@ if (!defined('SKYNET_DOOZER_MSG')) {
     define('SKYNET_DOOZER_MSG', true);
 }
 
-require('Exception.php');
-
 class Client {
     // raw socket handle
     private $_socket = null;

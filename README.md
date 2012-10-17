@@ -7,7 +7,9 @@ Dependencies
 ============
 
 [PHP 5.3.0 and above](http://www.php.net)
+
 [MongoDB PHP Driver](https://github.com/mongodb/mongo-php-driver)
+
 [Protobuf-PHP](https://github.com/drslump/Protobuf-PHP)
 
 Authors
