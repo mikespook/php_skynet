@@ -10,7 +10,7 @@ Dependencies
 
 [MongoDB PHP Driver](https://github.com/mongodb/mongo-php-driver)
 
-[Protobuf-PHP](https://github.com/drslump/Protobuf-PHP)
+[protoc-gen-php](https://github.com/iamamused/protoc-gen-php)
 
 Authors
 =======

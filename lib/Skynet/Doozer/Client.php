@@ -2,7 +2,6 @@
 namespace Skynet\Doozer;
 
 if (!defined('SKYNET_DOOZER_MSG')) {
-    require('pb4php/message/pb_message.php');
     require('msg.pb.php');
     define('SKYNET_DOOZER_MSG', true);
 }
@@ -63,14 +62,13 @@ class Client {
             }
             $resp .= $len . $data;
         }
-        $response = new Response();
-        $response->ParseFromString($resp);
+        $response = new Response($resp);
         return $response;
     }
 
     private function _write($request) {
-        $request->set_tag(0);
-        $data = $request->SerializeToString();
+        $request->setTag(0);
+        $data = $request->getPbString();
         $len = strlen($data);
         $data = pack('N', $len) . $data;
         
@@ -91,9 +89,11 @@ class Client {
     private function _invoke($request) {
         $this->_write($request);
         $response = $this->_read();
-        $errCode =$response->err_code();
-        if ($errCode != 0) {
-            throw new Exception($response->err_code_string(), $errCode);
+        if ($response->hasErrCode()) {
+            $errCode = $response->getErrCode();
+            if ($errCode != 0) {
+                throw new Exception($response->getErrDetail(), $errCode);
+            }
         }
         return $response;
     }
@@ -106,9 +106,9 @@ class Client {
     // Returns the current Doozer revision
     public function currentRevision() {
         $request = new Request();
-        $request->set_verb(Request_Verb::REV);
+        $request->setVerb(Request_Verb::REV);
         $response = $this->_invoke($request);
-        return $response->rev();
+        return $response->getRev();
     }
 
     /**
@@ -119,22 +119,22 @@ class Client {
      */
     public function set($path, $value, $rev=null) {
         $request = new Request();
-        $request->set_verb(Request_Verb::SET);
-        $request->set_path($path);
-        $request->set_value($value);
-        $request->set_rev($rev);
+        $request->setVerb(Request_Verb::SET);
+        $request->setPath($path);
+        $request->setValue($value);
+        $request->setRev($rev);
         $response = $this->_invoke($request);
-        return $response->rev();       
+        return $response->getRev();       
     }
 
     // Return the value at the supplied path and revision
     public function get($path, $rev=null) {
         $request = new Request();
-        $request->set_verb(Request_Verb::GET);
-        $request->set_path($path);
-        $request->set_rev($rev);
+        $request->setVerb(Request_Verb::GET);
+        $request->setPath($path);
+        $request->setRev($rev);
         $response = $this->_invoke($request);
-        return $response->value();       
+        return $response->getValue();       
     }
 
     /**
@@ -145,9 +145,9 @@ class Client {
      */
     public function delete($path, $rev=null) {
         $request = new Request();
-        $request->set_verb(Request_Verb::DEL);
-        $request->set_path($path);
-        $request->set_rev($rev);
+        $request->setVerb(Request_Verb::DEL);
+        $request->setPath($path);
+        $request->setRev($rev);
         $this->_write($request);
     }
 
@@ -158,27 +158,27 @@ class Client {
      */
     public function dir($path, $offset=0, $rev=null) {
         $request = new Request();
-        $request->set_verb(Request_Verb::GETDIR);
-        $request->set_path($path);
-        $request->set_rev($rev);
-        $request->set_offset($offset);
+        $request->setVerb(Request_Verb::GETDIR);
+        $request->setPath($path);
+        $request->setRev($rev);
+        $request->setOffset($offset);
         $response = $this->_invoke($request);
-        return $response->path();         
+        return $response->getPath();         
     }
 
     public function stat($path, $rev=null) {
         $request = new Request();
-        $request->set_verb(Request_Verb::STAT);
-        $request->set_path($path);
-        $request->set_rev($rev);
+        $request->setVerb(Request_Verb::STAT);
+        $request->setPath($path);
+        $request->setRev($rev);
         $response = $this->_invoke($request);
         return $response;    
     }
 
     public function access($path) {
         $request = new Request();
-        $request->set_verb(Request_Verb::ACCESS);
-        $request->set_path($path);
+        $request->setVerb(Request_Verb::ACCESS);
+        $request->setPath($path);
         $response = $this->_invoke($request);
         return $response;    
     }
@@ -192,17 +192,19 @@ class Client {
         $rev = is_null($rev) ? $this->currentRevision() : $rev;
         //while(true) {
             $request = new Request();
-            $request->set_verb(Request_Verb::WALK);
-            $request->set_path($path);
-            $request->set_rev($rev);
-            $request->set_offset($offset);
+            $request->setVerb(Request_Verb::WALK);
+            $request->setPath($path);
+            $request->setRev($rev);
+            $request->setOffset($offset);
             $this->_write($request);
             $response = $this->_read();
-            $errCode = $response->err_code();
-            if ($errCode == Response_Err::RANGE) {
-                break;
-            } else if ($errCode != 0) {
-                throw new Exception($response->err_code_string(), $errCode);
+            if ($response->hasErrCode()) {
+                $errCode = $response->getErrCode();
+                if ($errCode == Response_Err::RANGE) {
+                    break;
+                } else if ($errCode != 0) {
+                    throw new Exception($response->getErrDetail(), $errCode);
+                }
             }
             $paths[] = $response;
         //}
@@ -217,7 +219,7 @@ class Client {
         $hosts = array();
         $paths = $this->walk('/ctl/node/*/addr', $this->currentRevision());
         foreach($paths as $path) {
-            $v = $path->value();
+            $v = $path->getValue();
             if (!empty($v)) {
                 $hosts[] = $v;
             }
@@ -231,12 +233,10 @@ class Client {
     public function wait($path, $rev = null) {
         $rev = is_null($rev) ? $this->currentRevision() : $rev;
         $request = new Request();
-        $request->set_verb(Request_Verb::WAIT);
-        $request->set_path($path);
-        $request->set_rev($rev);
+        $request->setVerb(Request_Verb::WAIT);
+        $request->setPath($path);
+        $request->setRev($rev);
         $response = $this->_invoke($request);
         return $response;
     }
-
-
 }

@@ -28,7 +28,7 @@ require("Doozer/Client.php");
 
 try {
     $r = new Registry();
-    $r->_services();
+    var_dump($r->_services());
 } catch (Skynet\Doozer\Exception $e) {
     var_dump($e);
 }
