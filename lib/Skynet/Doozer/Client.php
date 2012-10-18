@@ -1,12 +1,8 @@
 <?php
 namespace Skynet\Doozer;
 
-if (!defined('DRSLUMP_PROTOBUF')) {
-    require('DrSlump/Protobuf.php');
-    \DrSlump\Protobuf::autoload(); 
-    define('DRSLUMP_PROTOBUF', true);
-}
 if (!defined('SKYNET_DOOZER_MSG')) {
+    require('pb4php/message/pb_message.php');
     require('msg.pb.php');
     define('SKYNET_DOOZER_MSG', true);
 }
@@ -54,18 +50,27 @@ class Client {
     }
 
     private function _read() {
-        $data = '';
-        while ($out = socket_read($this->_socket, 512)) {
-            $data .= $out;
+        $resp = '';
+        while (true) {
+            $len = socket_read($this->_socket, 4);
+            if ($len === false) {
+                break;
+            }
+            $l = unpack('V', $len);
+            $data = socket_read($this->_socket, $l[1]-4);
+            if ($data === false) {
+                break;
+            }
+            $resp .= $len . $data;
         }
         $response = new Response();
-        $response->parse($data);
+        $response->ParseFromString($resp);
         return $response;
     }
 
     private function _write($request) {
-        $request->setTag(0);
-        $data = $request->serialize();
+        $request->set_tag(0);
+        $data = $request->SerializeToString();
         $len = strlen($data);
         $data = pack('N', $len) . $data;
         
@@ -86,9 +91,9 @@ class Client {
     private function _invoke($request) {
         $this->_write($request);
         $response = $this->_read();
-        $errCode =$response->getErrCode();
+        $errCode =$response->err_code();
         if ($errCode != 0) {
-            throw new Exception($response->getErrDetail(), $errCode);
+            throw new Exception($response->err_code_string(), $errCode);
         }
         return $response;
     }
@@ -101,9 +106,9 @@ class Client {
     // Returns the current Doozer revision
     public function currentRevision() {
         $request = new Request();
-        $request->setVerb(Request\Verb::REV);
+        $request->set_verb(Request_Verb::REV);
         $response = $this->_invoke($request);
-        return $response->rev;
+        return $response->rev();
     }
 
     /**
@@ -114,22 +119,22 @@ class Client {
      */
     public function set($path, $value, $rev=null) {
         $request = new Request();
-        $request->setVerb(Request\Verb::SET);
-        $request->setPath($path);
-        $request->setValue($value);
-        $request->setRev($rev);
+        $request->set_verb(Request_Verb::SET);
+        $request->set_path($path);
+        $request->set_value($value);
+        $request->set_rev($rev);
         $response = $this->_invoke($request);
-        return $response->rev;       
+        return $response->rev();       
     }
 
     // Return the value at the supplied path and revision
     public function get($path, $rev=null) {
         $request = new Request();
-        $request->setVerb(Request\Verb::GET);
-        $request->setPath($path);
-        $request->setRev($rev);
+        $request->set_verb(Request_Verb::GET);
+        $request->set_path($path);
+        $request->set_rev($rev);
         $response = $this->_invoke($request);
-        return $response->value;       
+        return $response->value();       
     }
 
     /**
@@ -140,9 +145,9 @@ class Client {
      */
     public function delete($path, $rev=null) {
         $request = new Request();
-        $request->setVerb(Request\Verb::DEL);
-        $request->setPath($path);
-        $request->setRev($rev);
+        $request->set_verb(Request_Verb::DEL);
+        $request->set_path($path);
+        $request->set_rev($rev);
         $this->_write($request);
     }
 
@@ -153,27 +158,27 @@ class Client {
      */
     public function dir($path, $offset=0, $rev=null) {
         $request = new Request();
-        $request->setVerb(Request\Verb::GETDIR);
-        $request->setPath($path);
-        $request->setRev($rev);
-        $request->setOffset($offset);
+        $request->set_verb(Request_Verb::GETDIR);
+        $request->set_path($path);
+        $request->set_rev($rev);
+        $request->set_offset($offset);
         $response = $this->_invoke($request);
-        return $response->path;         
+        return $response->path();         
     }
 
     public function stat($path, $rev=null) {
         $request = new Request();
-        $request->setVerb(Request\Verb::STAT);
-        $request->setPath($path);
-        $request->setRev($rev);
+        $request->set_verb(Request_Verb::STAT);
+        $request->set_path($path);
+        $request->set_rev($rev);
         $response = $this->_invoke($request);
         return $response;    
     }
 
     public function access($path) {
         $request = new Request();
-        $request->setVerb(Request\Verb::ACCESS);
-        $request->setPath($path);
+        $request->set_verb(Request_Verb::ACCESS);
+        $request->set_path($path);
         $response = $this->_invoke($request);
         return $response;    
     }
@@ -184,23 +189,23 @@ class Client {
      */ 
     public function walk($path, $rev=null, $offset=0) {
         $paths = array();
-        $rev = is_null($rev) ? $this->currentVersion() : $rev;
-        while(true) {
+        $rev = is_null($rev) ? $this->currentRevision() : $rev;
+        //while(true) {
             $request = new Request();
-            $request->setVerb(Request\Verb::WALK);
-            $request->setPath($path);
-            $request->setRev($rev);
-            $request->setOffset($offset);
+            $request->set_verb(Request_Verb::WALK);
+            $request->set_path($path);
+            $request->set_rev($rev);
+            $request->set_offset($offset);
             $this->_write($request);
             $response = $this->_read();
-            $errCode = $response->getErrCode();
-            if ($errCode == Response\Err::RANGE) {
+            $errCode = $response->err_code();
+            if ($errCode == Response_Err::RANGE) {
                 break;
             } else if ($errCode != 0) {
-                throw new Exception($response->getErrDetail(), $errCode);
+                throw new Exception($response->err_code_string(), $errCode);
             }
             $paths[] = $response;
-        }
+        //}
         return $paths;
     }
 
@@ -212,8 +217,9 @@ class Client {
         $hosts = array();
         $paths = $this->walk('/ctl/node/*/addr', $this->currentRevision());
         foreach($paths as $path) {
-            if (!empty($path.value)) {
-                $hosts[] = $path.value;
+            $v = $path->value();
+            if (!empty($v)) {
+                $hosts[] = $v;
             }
         }
     }
@@ -225,9 +231,9 @@ class Client {
     public function wait($path, $rev = null) {
         $rev = is_null($rev) ? $this->currentRevision() : $rev;
         $request = new Request();
-        $request->setVerb(Request\Verb::WAIT);
-        $request->setPath($path);
-        $request->setRev($rev);
+        $request->set_verb(Request_Verb::WAIT);
+        $request->set_path($path);
+        $request->set_rev($rev);
         $response = $this->_invoke($request);
         return $response;
     }

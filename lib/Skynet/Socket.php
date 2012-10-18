@@ -6,14 +6,14 @@ namespace Skynet;
 class Socket {
     // raw socket handle
     private $_socket = null;  
-    // Doozerd host
+    // Skynet host
     private $_host = '127.0.0.1';
-    // Doozerd port
-    private $_port = '8046';
+    // Skynet port
+    private $_port = '9001';
     // Socket params, see @http://www.php.net/manual/en/function.socket-get-option.php
     private $_params = array();
 
-    function __construct($host = '127.0.0.1', $port = '8046', $params = array()) {
+    function __construct($host = '127.0.0.1', $port = '9001', $params = array()) {
         $nport = getservbyname($port, 'tcp');
         $this->_port = empty($nport) ? $port : $nport;
         $this->_host = gethostbyname($host);
