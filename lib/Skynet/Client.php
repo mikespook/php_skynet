@@ -17,7 +17,7 @@ class Client {
     private $_services = array();
     private $_doozerHost = '127.0.0.1';
     private $_doozerPort = '8046';
-    private $_cache = 'Cache\File';
+    private $_cache = '\Skynet\Cache\File';
 
     /**
      * New a client
@@ -53,7 +53,7 @@ class Client {
         $this->_socket = new Socket($sky['host'], $sky['port'], $params);
         $handshake = $this->_socket->handshake();
         $this->_registered = $handshake['registered'];
-        $this->_clientId = $handshake['clientid']
+        $this->_clientId = $handshake['clientid'];
     }
 
     private function _selectSkynet() {
