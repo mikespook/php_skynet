@@ -5,7 +5,7 @@ namespace Skynet;
  */
 class Client {
     // sockets
-    private $_sockets = array();
+    private $_socket = null;
     // Service name
     private $_serviceName;
     // Service version, '*' by default, means all versions are allowed
@@ -14,13 +14,18 @@ class Client {
     private $_region = 'development';
     private $_registered = false;
     private $_clientId = '';
+    private $_services = array();
+    private $_doozerHost = '127.0.0.1';
+    private $_doozerPort = '8046';
+    private $_cache = 'Cache\File';
 
     /**
      * New a client
      * @serviceName 
      * @params version, region for Skynet, and socket params
      */
-    function __construct($serviceName, $params) {
+    function __construct($serviceName, $params = array()) {
+        $this->_serviceName = $serviceName;
         if (isset($params['version'])) {
             $this->_version = $params['version'];
             unset($params['version']);
@@ -29,14 +34,46 @@ class Client {
             $this->_region = $params['region'];
             unset($params['region']);          
         }
-        $this->_connect($this->_host, $this->_port);
-        $serviceHandshake = $this->_readBsonDoc();
-        $this->_registered = $serviceHandshake['registered'];
-        $this->_clientId = $serviceHandshake['clientid'];
-        $clientHandshake = array(
-            'clientid' => $this->_clientId,
-        ); 
-        this->_writeBsonDoc($clientHandshake);
+        if (isset($params['doozer_host'])) {
+            $this->_doozerHost = $params['doozer_host'];
+            unset($params['doozer_host']);          
+        }
+        if (isset($params['doozer_port'])) {
+            $this->_doozerPort = $params['doozer_port'];
+            unset($params['doozer_port']);          
+        }
+        if (isset($params['cache'])) {
+            $this->_cache = $params['cache'];
+            unset($params['cache']);          
+        }
+        // Get cache
+        $this->_loadServicesCache();
+        // Select a service by serviceName, version, region
+        $sky = $this->_selectSkynet();
+        $this->_socket = new Socket($sky['host'], $sky['port'], $params);
+        $handshake = $this->_socket->handshake();
+        $this->_registered = $handshake['registered'];
+        $this->_clientId = $handshake['clientid']
+    }
+
+    private function _selectSkynet() {
+        $service = $this->_services[array_rand($this->_services)];
+        return array(
+            'host' => $service['Config']['ServiceAddr']['IPAddress'],
+            'post' => $service['Config']['ServiceAddr']['Port'],
+        );
+    }
+
+    private function _loadServicesCache() {
+        $cache = new $this->_cache;
+        if ($cache->has('services')) {
+            $this->_services = $cache->get('services');
+        } else {
+            // Connect to Doozer
+            $registry = new Registry($doozerHost, $doozerPort, $params);
+            $this->_services = $registry->getServices();
+            $cache->set('services', $this->_services);
+        }
     }
 
     public function Call($methodName, $params) {
@@ -45,7 +82,7 @@ class Client {
             'servicemethod' => "{$this->_serviceName}.Forward",
             'seq' => $seq,
         );
-        $this->_writeBsonDoc($header);
+        $this->_socket->writeBsonDoc($header);
         $request = array(
             'clientid'  => (string)$reqId,
             'in'        => bson_encode($params),
@@ -56,9 +93,9 @@ class Client {
                 'originaddress' => '',
             ),
         );
-        $this->_writeBsonDoc($request);
-        $header = $this->_readBsonDoc();
-        $response = $this->_readBsonDoc();
+        $this->_socket->writeBsonDoc($request);
+        $header = $this->_socket->readBsonDoc();
+        $response = $this->_socket->readBsonDoc();
         if (isset($header['seq'])) {
             if (seq != $header['seq']) {
                 throw Skynet_Exception("Incorrect Response received, expected seq={$seq}, received: {$header['inspect']}");

@@ -11,13 +11,16 @@ class Socket {
     // Skynet port
     private $_port = '9001';
     // Socket params, see @http://www.php.net/manual/en/function.socket-get-option.php
-    private $_params = array();
+    private $_params = array(
+        SO_RCVTIMEO => array("sec"=>0, "usec"=>10),
+        SO_SNDTIMEO => array("sec"=>10, "usec" => 0)
+    );
 
     function __construct($host = '127.0.0.1', $port = '9001', $params = array()) {
         $nport = getservbyname($port, 'tcp');
         $this->_port = empty($nport) ? $port : $nport;
         $this->_host = gethostbyname($host);
-        $this->_params = $params;
+        $this->_params += $params;
         $this->_connect();
     }
 
@@ -40,7 +43,7 @@ class Socket {
         }
     }
 
-    private function _readBsonDoc() {
+    public function readBsonDoc() {
         $bsonlen = socket_read($this->_socket, 4);
         if ($bsonlen === false) {
             throw new Exception(socket_strerror(socket_last_error($this->_socket)));
@@ -50,7 +53,7 @@ class Socket {
         return bson_decode($bsonlen . $bsondata);
     }
 
-    private function _writeBsonDoc($doc) {
+    public function writeBsonDoc($doc) {
         $bsondata = bson_encode($doc);
         $bsonlen = strlen($bsondata); 
         while(true) { 
@@ -65,6 +68,15 @@ class Socket {
                 break; 
             } 
         }
+    }
+
+    public function handshake() {
+        $serviceHandshake = $this->readBsonDoc();
+        $clientHandshake = array(
+            'clientid' => $serviceHandshake['clientid'],
+        ); 
+        this->writeBsonDoc($clientHandshake);
+        return $serviceHandshake; 
     }
 
     public function close() {

@@ -24,7 +24,7 @@ class Client {
         $nport = getservbyname($port, 'tcp');
         $this->_port = empty($nport) ? $port : $nport;
         $this->_host = gethostbyname($host);
-        $this->_params = $this->_params + $params;
+        $this->_params += $params;
         $this->_connect();
     }  
 
@@ -51,16 +51,11 @@ class Client {
     private function _read() {
         $resp = '';
         while (true) {
-            $len = socket_read($this->_socket, 4);
-            if ($len === false) {
-                break;
-            }
-            $l = unpack('V', $len);
-            $data = socket_read($this->_socket, $l[1]-4);
+            $data = socket_read($this->_socket, 1024);
             if ($data === false) {
                 break;
             }
-            $resp .= $len . $data;
+            $resp .= $data;
         }
         $response = new Response($resp);
         return $response;
@@ -190,7 +185,7 @@ class Client {
     public function walk($path, $rev=null, $offset=0) {
         $paths = array();
         $rev = is_null($rev) ? $this->currentRevision() : $rev;
-        //while(true) {
+        while(true) {
             $request = new Request();
             $request->setVerb(Request_Verb::WALK);
             $request->setPath($path);
@@ -207,7 +202,8 @@ class Client {
                 }
             }
             $paths[] = $response;
-        //}
+            $offset++;
+        }
         return $paths;
     }
 
