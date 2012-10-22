@@ -18,13 +18,14 @@ class Client {
     private $_doozerHost = '127.0.0.1';
     private $_doozerPort = '8046';
     private $_cache = '\Skynet\Cache\File';
+    private $_params = array();
 
     /**
      * New a client
      * @serviceName 
      * @params version, region for Skynet, and socket params
      */
-    function __construct($serviceName, $params = array()) {
+    function __construct($serviceName='skydaemon', $params = array()) {
         $this->_serviceName = $serviceName;
         if (isset($params['version'])) {
             $this->_version = $params['version'];
@@ -54,13 +55,14 @@ class Client {
         $handshake = $this->_socket->handshake();
         $this->_registered = $handshake['registered'];
         $this->_clientId = $handshake['clientid'];
+        $this->_params = $params;
     }
 
     private function _selectSkynet() {
         $service = $this->_services[array_rand($this->_services)];
         return array(
             'host' => $service['Config']['ServiceAddr']['IPAddress'],
-            'post' => $service['Config']['ServiceAddr']['Port'],
+            'port' => $service['Config']['ServiceAddr']['Port'],
         );
     }
 
@@ -70,7 +72,7 @@ class Client {
             $this->_services = $cache->get('services');
         } else {
             // Connect to Doozer
-            $registry = new Registry($doozerHost, $doozerPort, $params);
+            $registry = new Registry($this->_doozerHost, $this->_doozerPort, $this->_params);
             $this->_services = $registry->getServices();
             $cache->set('services', $this->_services);
         }

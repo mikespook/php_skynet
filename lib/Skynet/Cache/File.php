@@ -6,7 +6,7 @@ class File {
     private $_base = '';
 
     function __construct($params = array()) {
-        $this->_base = sys_get_temp_dir();
+        $this->_base = sys_get_temp_dir() . DIRECTORY_SEPARATOR;
     }
 
     public function has($key) {

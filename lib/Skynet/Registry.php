@@ -30,12 +30,3 @@ class Registry {
         return $rst;
     }
 }
-require("Doozer/Exception.php");
-require("Doozer/Client.php");
-
-try {
-    $r = new Registry();
-    var_dump($r->getServices());
-} catch (Skynet\Doozer\Exception $e) {
-    var_dump($e);
-}

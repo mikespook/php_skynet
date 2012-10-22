@@ -49,7 +49,7 @@ class Socket {
             throw new Exception(socket_strerror(socket_last_error($this->_socket)));
         }
         $l = unpack('V', $bsonlen);
-        $bsondata = socket_read($this->_socket, $l - 4);
+        $bsondata = socket_read($this->_socket, $l[1] - 4);
         return bson_decode($bsonlen . $bsondata);
     }
 
@@ -75,7 +75,7 @@ class Socket {
         $clientHandshake = array(
             'clientid' => $serviceHandshake['clientid'],
         ); 
-        this->writeBsonDoc($clientHandshake);
+        $this->writeBsonDoc($clientHandshake);
         return $serviceHandshake; 
     }
 
