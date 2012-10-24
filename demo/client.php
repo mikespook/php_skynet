@@ -9,5 +9,6 @@ require(ROOT . 'Skynet/Socket.php');
 require(ROOT . 'Skynet/Client.php');
 
 $client =  new \Skynet\Client('TestService', array('cache' => '\Skynet\Cache\File'));
+echo $client->getId();
 $out = $client->Call('Upcase', array('data' => 'Upcase me!'));
 var_dump($out);

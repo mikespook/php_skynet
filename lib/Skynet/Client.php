@@ -19,6 +19,7 @@ class Client {
     private $_doozerPort = '8046';
     private $_cache = null;
     private $_params = array();
+    private $_seq = 0;
 
     /**
      * New a client
@@ -85,10 +86,10 @@ class Client {
     }
 
     public function Call($methodName, $params) {
-        $reqId = new MongoId(); 
+        $reqId = new \MongoId(); 
         $header = array(
             'servicemethod' => "{$this->_serviceName}.Forward",
-            'seq' => $seq,
+            'seq' => $this->_seq,
         );
         $this->_socket->writeBsonDoc($header);
         $request = array(
@@ -96,7 +97,7 @@ class Client {
             'in'        => bson_encode($params),
             'method'    => $methodName,
             'requestinfo'   =>  array(
-                'requestid' => reqId,
+                'requestid' => $reqId,
                 'retrycount' => 0,
                 'originaddress' => '',
             ),
@@ -105,23 +106,28 @@ class Client {
         $header = $this->_socket->readBsonDoc();
         $response = $this->_socket->readBsonDoc();
         if (isset($header['seq'])) {
-            if (seq != $header['seq']) {
-                throw Skynet_Exception("Incorrect Response received, expected seq={$seq}, received: {$header['inspect']}");
+            if ($this->_seq != $header['seq']) {
+                throw Exception("Incorrect Response received, expected seq={$seq}, received: {$header['inspect']}");
             }
         }else {
-            throw Skynet_Exception("Invalid Response header, missing 'seq': {$header['inspect']}");
-        } 
-        // socket.user_data += 1
+            throw new Exception("Invalid Response header, missing 'seq': {$header['inspect']}");
+        }
+
+        $this->_seq ++;
         # If an error is returned from Skynet raise a Skynet exception
         if (!empty($header['error'])) {
-            throw Skynet_Exception($header['error']);
+            throw new Exception($header['error']);
         }
 
         # If an error is returned from the service raise a Service exception
         if (!empty($response['error'])) {
-            throw Skynet_Exception($response['error']);
+            throw new Exception($response['error']);
         }
         # The return value is inside the response object, it's a byte array of it's own and needs to be deserialized
         return bson_decode($response['out']);
+    }
+
+    public function getId() {
+        return $this->_clientId;
     }
 }
