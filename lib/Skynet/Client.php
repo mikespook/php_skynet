@@ -17,7 +17,7 @@ class Client {
     private $_services = array();
     private $_doozerHost = '127.0.0.1';
     private $_doozerPort = '8046';
-    private $_cache = '\Skynet\Cache\File';
+    private $_cache = null;
     private $_params = array();
 
     /**
@@ -67,14 +67,20 @@ class Client {
     }
 
     private function _loadServicesCache() {
-        $cache = new $this->_cache;
-        if ($cache->has('services')) {
+        if (is_null($this->_cache)) {
+            $cache = false;
+        } else {
+            $cache = new $this->_cache;
+        }
+        if ($cache && $cache->has('services')) {
             $this->_services = $cache->get('services');
         } else {
             // Connect to Doozer
             $registry = new Registry($this->_doozerHost, $this->_doozerPort, $this->_params);
             $this->_services = $registry->getServices();
-            $cache->set('services', $this->_services);
+            if ($cache) {
+                $cache->set('services', $this->_services);
+            }
         }
     }
 
