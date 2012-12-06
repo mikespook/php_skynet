@@ -93,7 +93,7 @@ class Client {
         );
         $this->_socket->writeBsonDoc($header);
         $request = array(
-            'clientid'  => $this->_clientId,
+            'clientid'  => (string)$reqId,
             'in'        => bson_encode($params),
             'method'    => $methodName,
             'requestinfo'   =>  array(
