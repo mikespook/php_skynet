@@ -2,7 +2,7 @@
 
 namespace Skynet\Cache;
 
-class File {
+class File implements Cache {
     private $_base = '';
 
     function __construct($params = array()) {

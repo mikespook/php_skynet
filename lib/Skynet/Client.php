@@ -26,7 +26,7 @@ class Client {
      * @serviceName 
      * @params version, region for Skynet, and socket params
      */
-    function __construct($serviceName='skydaemon', $params = array()) {
+    function __construct($serviceName, $params = array()) {
         $this->_serviceName = $serviceName;
         if (isset($params['version'])) {
             $this->_version = $params['version'];
