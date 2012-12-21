@@ -15,6 +15,9 @@ class Socket {
         SO_RCVTIMEO => array("sec"=>0, "usec"=>10),
         SO_SNDTIMEO => array("sec"=>10, "usec" => 0)
     );
+    private $_clientId = '';
+    private $_registered = false;
+    private $_seq = 0;
 
     function __construct($host = '127.0.0.1', $port = '9001', $params = array()) {
         $nport = getservbyname($port, 'tcp');
@@ -22,6 +25,7 @@ class Socket {
         $this->_host = gethostbyname($host);
         $this->_params += $params;
         $this->_connect();
+        $this->_handshake();
     }
 
     function __destruct() {
@@ -41,6 +45,25 @@ class Socket {
         if (!socket_connect($this->_socket, $this->_host, $this->_port)) {
             throw new Exception(socket_strerror(socket_last_error($this->_socket)));
         }
+    }
+
+    private function _handshake() {
+        $serviceHandshake = $this->readBsonDoc();
+        $this->_clientId = $serviceHandshake['clientid'];
+        $this->_registered = $serviceHandshake['registered'];
+        if (!$this->_registered) {
+            $this->close();
+        }
+        $this->writeBsonDoc(array());
+        return $serviceHandshake;
+    }
+
+    public function getClientId() {
+        return $this->_clientId;
+    }
+
+    public function getRegistered() {
+        return $this->_registered;
     }
 
     public function readBsonDoc() {
@@ -68,15 +91,7 @@ class Socket {
                 break; 
             } 
         }
-    }
-
-    public function handshake() {
-        $serviceHandshake = $this->readBsonDoc();
-        $clientHandshake = array(
-            'clientid' => $serviceHandshake['clientid'],
-        ); 
-        $this->writeBsonDoc($clientHandshake);
-        return $serviceHandshake; 
+        $this->_seq ++;
     }
 
     public function close() {

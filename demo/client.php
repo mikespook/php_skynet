@@ -9,7 +9,6 @@ require(ROOT . 'Skynet/Socket.php');
 require(ROOT . 'Skynet/Client.php');
 
 
-$client =  new \Skynet\Client('TestService', array('cache' => '\Skynet\Cache\Null'));
-echo $client->getId();
-$out = $client->Call('Upcase', array('data' => 'Upcase me!'));
-var_dump($out);
+$socket = new \Skynet\Socket('127.0.0.1', '9002');
+echo $socket->getClientId() . "\n";
+echo $socket->getRegistered() . "\n";
